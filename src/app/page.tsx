@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import videosData from "../../data/videos.json";
-import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
+import { trackEvent, trackEventWithCallback, MixpanelEvents } from "@/lib/mixpanel";
 
 type TimeOption = "10" | "20" | "30" | null;
 type MoodOption = "chef" | "trending" | "info" | "funny" | null;
@@ -85,26 +85,23 @@ export default function Home() {
   const handleMenuClick = async (mood: MoodOption) => {
     setSelectedMood(mood);
     
-    // 메뉴 선택 트래킹
-    trackEvent(MixpanelEvents.SELECT_MENU, {
-      menu: mood,
-      time: selectedTime,
-    });
-    
     if (selectedTime && mood) {
       const video = getRandomVideo(selectedTime, mood);
       if (video) {
-        // 이벤트 전송 시간 확보 후 이동
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // 메뉴 선택 트래킹 (이벤트 전송 완료 후 이동)
+        await trackEventWithCallback(MixpanelEvents.SELECT_MENU, {
+          menu: mood,
+          time: selectedTime,
+        });
         router.push(`/player/${video.id}?time=${selectedTime}&mood=${mood}`);
       }
     }
   };
 
-  const handleTimeClick = (time: TimeOption) => {
+  const handleTimeClick = async (time: TimeOption) => {
     setSelectedTime(time);
     // 시간 선택 트래킹
-    trackEvent(MixpanelEvents.SELECT_TIME, { time });
+    await trackEventWithCallback(MixpanelEvents.SELECT_TIME, { time });
   };
 
   return (

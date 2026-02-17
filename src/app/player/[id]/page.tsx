@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import videosData from "../../../../data/videos.json";
-import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
+import { trackEvent, trackEventWithCallback, MixpanelEvents } from "@/lib/mixpanel";
 
 interface Video {
   id: string;
@@ -234,16 +234,8 @@ export default function PlayerPage() {
   }, [isAPIReady, video, startCountdown]);
 
   // 다른 영상 보기
-  const handleNextVideo = () => {
+  const handleNextVideo = async () => {
     if (!time || !mood) return;
-
-    // 다른 영상 보기 트래킹
-    trackEvent(MixpanelEvents.CLICK_OTHER_VIDEO, {
-      current_video_id: video?.id,
-      current_video_title: video?.title,
-      time: time,
-      mood: mood,
-    });
 
     // 카운트다운 취소
     if (countdownRef.current) {
@@ -276,24 +268,33 @@ export default function PlayerPage() {
     const randomIndex = Math.floor(Math.random() * available.length);
     const nextVideo = available[randomIndex];
 
+    // 다른 영상 보기 트래킹 (이벤트 전송 완료 후 이동)
+    await trackEventWithCallback(MixpanelEvents.CLICK_OTHER_VIDEO, {
+      current_video_id: video?.id,
+      current_video_title: video?.title,
+      time: time,
+      mood: mood,
+    });
+
     // 새 영상으로 이동
     router.push(`/player/${nextVideo.id}?time=${time}&mood=${mood}`);
   };
 
   // 수동으로 식사 끝
-  const handleFinishMeal = () => {
-    // 식사 끝 버튼 트래킹
-    trackEvent(MixpanelEvents.CLICK_FINISH_MEAL, {
+  const handleFinishMeal = async () => {
+    // 카운트다운 취소
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+    }
+
+    // 식사 끝 버튼 트래킹 (이벤트 전송 완료 후 이동)
+    await trackEventWithCallback(MixpanelEvents.CLICK_FINISH_MEAL, {
       video_id: video?.id,
       video_title: video?.title,
       time: time,
       mood: mood,
     });
 
-    // 카운트다운 취소
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-    }
     goToReceipt();
   };
 
