@@ -82,7 +82,7 @@ export default function Home() {
     return available[randomIndex];
   };
 
-  const handleMenuClick = (mood: MoodOption) => {
+  const handleMenuClick = async (mood: MoodOption) => {
     setSelectedMood(mood);
     
     // 메뉴 선택 트래킹
@@ -94,6 +94,8 @@ export default function Home() {
     if (selectedTime && mood) {
       const video = getRandomVideo(selectedTime, mood);
       if (video) {
+        // 이벤트 전송 시간 확보 후 이동
+        await new Promise(resolve => setTimeout(resolve, 100));
         router.push(`/player/${video.id}?time=${selectedTime}&mood=${mood}`);
       }
     }
