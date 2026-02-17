@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import videosData from "../../data/videos.json";
+import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
 
 type TimeOption = "10" | "20" | "30" | null;
 type MoodOption = "chef" | "trending" | "info" | "funny" | null;
@@ -54,6 +55,8 @@ export default function Home() {
     if (saved) {
       setWatchedVideos(JSON.parse(saved));
     }
+    // 페이지 뷰 트래킹
+    trackEvent(MixpanelEvents.PAGE_VIEW_HOME);
   }, []);
 
   const getRandomVideo = (time: string, mood: string) => {
@@ -82,6 +85,12 @@ export default function Home() {
   const handleMenuClick = (mood: MoodOption) => {
     setSelectedMood(mood);
     
+    // 메뉴 선택 트래킹
+    trackEvent(MixpanelEvents.SELECT_MENU, {
+      menu: mood,
+      time: selectedTime,
+    });
+    
     if (selectedTime && mood) {
       const video = getRandomVideo(selectedTime, mood);
       if (video) {
@@ -92,6 +101,8 @@ export default function Home() {
 
   const handleTimeClick = (time: TimeOption) => {
     setSelectedTime(time);
+    // 시간 선택 트래킹
+    trackEvent(MixpanelEvents.SELECT_TIME, { time });
   };
 
   return (

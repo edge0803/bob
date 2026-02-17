@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import videosData from "../../../../data/videos.json";
+import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
 
 interface Video {
   id: string;
@@ -73,6 +74,15 @@ export default function PlayerPage() {
       setVideo(foundVideo);
       setStartTime(new Date().toISOString());
       
+      // 페이지 뷰 트래킹
+      trackEvent(MixpanelEvents.PAGE_VIEW_PLAYER, {
+        video_id: foundVideo.id,
+        video_title: foundVideo.title,
+        channel: foundVideo.channel,
+        time: time,
+        mood: mood,
+      });
+      
       // watched 기록 업데이트
       const saved = localStorage.getItem("bobfriend-watched-videos");
       const watched = saved ? JSON.parse(saved) : [];
@@ -81,7 +91,7 @@ export default function PlayerPage() {
         localStorage.setItem("bobfriend-watched-videos", JSON.stringify(watched));
       }
     }
-  }, [initialVideoId]);
+  }, [initialVideoId, time, mood]);
 
   // 영수증 페이지로 이동하는 함수
   const goToReceipt = useCallback(() => {
@@ -194,12 +204,27 @@ export default function PlayerPage() {
           switch (event.data) {
             case 1: // 재생 시작
               console.log("play_started", video.id, currentTime);
+              trackEvent(MixpanelEvents.VIDEO_PLAY_START, {
+                video_id: video.id,
+                video_title: video.title,
+                current_time: currentTime,
+              });
               break;
             case 2: // 일시정지
               console.log("play_paused", video.id, currentTime);
+              trackEvent(MixpanelEvents.VIDEO_PLAY_PAUSE, {
+                video_id: video.id,
+                video_title: video.title,
+                current_time: currentTime,
+              });
               break;
             case 0: // 영상 종료
               console.log("play_ended", video.id, currentTime);
+              trackEvent(MixpanelEvents.VIDEO_PLAY_END, {
+                video_id: video.id,
+                video_title: video.title,
+                current_time: currentTime,
+              });
               startCountdown();
               break;
           }
@@ -211,6 +236,14 @@ export default function PlayerPage() {
   // 다른 영상 보기
   const handleNextVideo = () => {
     if (!time || !mood) return;
+
+    // 다른 영상 보기 트래킹
+    trackEvent(MixpanelEvents.CLICK_OTHER_VIDEO, {
+      current_video_id: video?.id,
+      current_video_title: video?.title,
+      time: time,
+      mood: mood,
+    });
 
     // 카운트다운 취소
     if (countdownRef.current) {
@@ -249,6 +282,14 @@ export default function PlayerPage() {
 
   // 수동으로 식사 끝
   const handleFinishMeal = () => {
+    // 식사 끝 버튼 트래킹
+    trackEvent(MixpanelEvents.CLICK_FINISH_MEAL, {
+      video_id: video?.id,
+      video_title: video?.title,
+      time: time,
+      mood: mood,
+    });
+
     // 카운트다운 취소
     if (countdownRef.current) {
       clearInterval(countdownRef.current);

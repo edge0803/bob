@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
 
 interface WatchRecord {
   id: string;
@@ -32,7 +33,16 @@ export default function ReceiptPage() {
     // 최근 시청 기록 불러오기
     const lastWatched = localStorage.getItem("bobfriend-last-watched");
     if (lastWatched) {
-      setRecord(JSON.parse(lastWatched));
+      const parsedRecord = JSON.parse(lastWatched);
+      setRecord(parsedRecord);
+      
+      // 페이지 뷰 트래킹
+      trackEvent(MixpanelEvents.PAGE_VIEW_RECEIPT, {
+        video_id: parsedRecord.id,
+        video_title: parsedRecord.title,
+        time: parsedRecord.selectedTime,
+        mood: parsedRecord.selectedMood,
+      });
     }
 
     // 첫 사용일 계산
@@ -177,6 +187,10 @@ export default function ReceiptPage() {
       <div className="mt-6 max-w-sm mx-auto space-y-3">
         <Link
           href={`/player/${record.id}?time=${record.selectedTime}&mood=${record.selectedMood}`}
+          onClick={() => trackEvent(MixpanelEvents.CLICK_WATCH_AGAIN, {
+            video_id: record.id,
+            video_title: record.title,
+          })}
           className="block w-full bg-black text-white font-semibold py-4 rounded-full text-center"
         >
           다시 보기

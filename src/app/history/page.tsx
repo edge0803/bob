@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
 
 interface WatchRecord {
   id: string;
@@ -45,6 +46,9 @@ export default function HistoryPage() {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       setDaysSinceStart(diffDays || 1);
     }
+
+    // 페이지 뷰 트래킹
+    trackEvent(MixpanelEvents.PAGE_VIEW_HISTORY);
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -65,6 +69,11 @@ export default function HistoryPage() {
   };
 
   const handleReceiptClick = (record: WatchRecord) => {
+    // 영수증 카드 클릭 트래킹
+    trackEvent(MixpanelEvents.CLICK_RECEIPT_CARD, {
+      video_id: record.id,
+      video_title: record.title,
+    });
     // 해당 영수증을 last-watched에 저장하고 영수증 페이지로 이동
     localStorage.setItem("bobfriend-last-watched", JSON.stringify(record));
   };
