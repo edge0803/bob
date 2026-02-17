@@ -40,8 +40,8 @@ export default function ReceiptPage() {
       trackEvent(MixpanelEvents.PAGE_VIEW_RECEIPT, {
         video_id: parsedRecord.id,
         video_title: parsedRecord.title,
-        time: parsedRecord.selectedTime,
-        mood: parsedRecord.selectedMood,
+        selected_time: parsedRecord.selectedTime,
+        selected_mood: parsedRecord.selectedMood,
       });
     }
 

@@ -53,12 +53,17 @@ export const trackEventWithCallback = (
     
     try {
       console.log('[Mixpanel] Tracking event with callback:', eventName, properties);
-      mixpanel.track(eventName, properties, { send_immediately: true }, () => {
+      
+      // mixpanel.track(event, properties, callback) 형식 사용
+      mixpanel.track(eventName, properties, () => {
         console.log('[Mixpanel] Event sent:', eventName);
-        resolve();
       });
-      // 타임아웃 fallback (300ms 후 강제 resolve)
-      setTimeout(resolve, 300);
+      
+      // 이벤트 전송 시간 확보 (500ms 대기)
+      setTimeout(() => {
+        console.log('[Mixpanel] Timeout reached, proceeding:', eventName);
+        resolve();
+      }, 500);
     } catch (error) {
       console.error('[Mixpanel] Track error:', error);
       resolve();

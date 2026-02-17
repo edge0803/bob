@@ -79,8 +79,8 @@ export default function PlayerPage() {
         video_id: foundVideo.id,
         video_title: foundVideo.title,
         channel: foundVideo.channel,
-        time: time,
-        mood: mood,
+        selected_time: time,
+        selected_mood: mood,
       });
       
       // watched 기록 업데이트
@@ -272,8 +272,8 @@ export default function PlayerPage() {
     await trackEventWithCallback(MixpanelEvents.CLICK_OTHER_VIDEO, {
       current_video_id: video?.id,
       current_video_title: video?.title,
-      time: time,
-      mood: mood,
+      selected_time: time,
+      selected_mood: mood,
     });
 
     // 새 영상으로 이동
@@ -291,8 +291,8 @@ export default function PlayerPage() {
     await trackEventWithCallback(MixpanelEvents.CLICK_FINISH_MEAL, {
       video_id: video?.id,
       video_title: video?.title,
-      time: time,
-      mood: mood,
+      selected_time: time,
+      selected_mood: mood,
     });
 
     goToReceipt();

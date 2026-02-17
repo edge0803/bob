@@ -91,17 +91,17 @@ export default function Home() {
         // 메뉴 선택 트래킹 (이벤트 전송 완료 후 이동)
         await trackEventWithCallback(MixpanelEvents.SELECT_MENU, {
           menu: mood,
-          time: selectedTime,
+          selected_time: selectedTime,
         });
         router.push(`/player/${video.id}?time=${selectedTime}&mood=${mood}`);
       }
     }
   };
 
-  const handleTimeClick = async (time: TimeOption) => {
-    setSelectedTime(time);
+  const handleTimeClick = async (timeValue: TimeOption) => {
+    setSelectedTime(timeValue);
     // 시간 선택 트래킹
-    await trackEventWithCallback(MixpanelEvents.SELECT_TIME, { time });
+    await trackEventWithCallback(MixpanelEvents.SELECT_TIME, { selected_time: timeValue });
   };
 
   return (
