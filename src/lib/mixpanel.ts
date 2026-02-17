@@ -1,16 +1,37 @@
 import mixpanel from "mixpanel-browser";
 
+let isInitialized = false;
+
 // Mixpanel 초기화
 export const initMixpanel = () => {
-  mixpanel.init('ab5d5f7b775fa04418cd064ce81e97fe', {
-    autocapture: true,
-    record_sessions_percent: 100,
-  });
+  if (typeof window === 'undefined') return;
+  if (isInitialized) return;
+  
+  try {
+    mixpanel.init('ab5d5f7b775fa04418cd064ce81e97fe', {
+      autocapture: true,
+      record_sessions_percent: 100,
+      debug: process.env.NODE_ENV === 'development',
+      ignore_dnt: true,
+    });
+    isInitialized = true;
+  } catch (error) {
+    console.error('Mixpanel init error:', error);
+  }
 };
 
 // 이벤트 트래킹 헬퍼 함수들
 export const trackEvent = (eventName: string, properties?: Record<string, unknown>) => {
-  mixpanel.track(eventName, properties);
+  if (typeof window === 'undefined') return;
+  if (!isInitialized) {
+    initMixpanel();
+  }
+  
+  try {
+    mixpanel.track(eventName, properties);
+  } catch (error) {
+    console.error('Mixpanel track error:', error);
+  }
 };
 
 // 주요 이벤트들
