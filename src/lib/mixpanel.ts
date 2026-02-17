@@ -9,7 +9,7 @@ export const initMixpanel = () => {
   
   try {
     mixpanel.init('ab5d5f7b775fa04418cd064ce81e97fe', {
-      autocapture: true,
+     autocapture: false,
       record_sessions_percent: 100,
       debug: process.env.NODE_ENV === 'development',
       ignore_dnt: true,
