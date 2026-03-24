@@ -155,29 +155,17 @@ export default function PlayerPage() {
     router.push("/receipt");
   }, [video, time, mood, router, startTime]);
 
-  // 카운트다운 시작
+  // 영상 종료 시 즉시 영수증으로 이동
   const startCountdown = useCallback(() => {
-    setCountdown(3);
-    
-    countdownRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev === null || prev <= 1) {
-          if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-          }
-          goToReceipt();
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    goToReceipt();
   }, [goToReceipt]);
 
   // 컴포넌트 언마운트 시 카운트다운 정리
   useEffect(() => {
+    const timer = countdownRef.current;
     return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
+      if (timer) {
+        clearInterval(timer);
       }
     };
   }, []);
