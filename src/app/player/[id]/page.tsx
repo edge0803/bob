@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import videosData from "../../../../data/videos.json";
 import { trackEvent, trackEventWithCallback, MixpanelEvents } from "@/lib/mixpanel";
+import { incrementHeartCount, subscribeHeartCount } from "@/lib/firebaseClient";
 
 interface Video {
   id: string;
@@ -63,6 +64,9 @@ export default function PlayerPage() {
   const [allWatched, setAllWatched] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [startTime, setStartTime] = useState<string>("");
+  const [heartCount, setHeartCount] = useState<number>(0);
+  const [isHeartLoading, setIsHeartLoading] = useState<boolean>(true);
+  const [hasLiked, setHasLiked] = useState<boolean>(false);
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -71,8 +75,11 @@ export default function PlayerPage() {
   useEffect(() => {
     const foundVideo = videosData.videos.find((v) => v.id === initialVideoId);
     if (foundVideo) {
-      setVideo(foundVideo);
-      setStartTime(new Date().toISOString());
+      // eslint 룰: useEffect 내부 동기 setState 방지
+      queueMicrotask(() => {
+        setVideo(foundVideo);
+        setStartTime(new Date().toISOString());
+      });
       
       // 페이지 뷰 트래킹
       trackEvent(MixpanelEvents.PAGE_VIEW_PLAYER, {
@@ -92,6 +99,26 @@ export default function PlayerPage() {
       }
     }
   }, [initialVideoId, time, mood]);
+
+  // 하트 카운트 실시간 구독
+  useEffect(() => {
+    if (!video?.id) return;
+    const unsubscribe = subscribeHeartCount(video.id, (count) => {
+      setHeartCount(count);
+      setIsHeartLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [video?.id]);
+
+  // 하트는 유저가 한번만 누르도록 로컬 플래그 저장
+  useEffect(() => {
+    if (!video?.id) return;
+    const key = `bobfriend-hearted-${video.id}`;
+    queueMicrotask(() => {
+      setHasLiked(localStorage.getItem(key) === "1");
+    });
+  }, [video?.id]);
 
   // 영수증 페이지로 이동하는 함수
   const goToReceipt = useCallback(() => {
@@ -161,7 +188,7 @@ export default function PlayerPage() {
 
     // 이미 API가 로드되어 있는지 확인
     if (window.YT && window.YT.Player) {
-      setIsAPIReady(true);
+      queueMicrotask(() => setIsAPIReady(true));
       return;
     }
 
@@ -222,6 +249,13 @@ export default function PlayerPage() {
               console.log("play_ended", video.id, currentTime);
               trackEvent(MixpanelEvents.VIDEO_PLAY_END, {
                 video_id: video.id,
+                video_title: video.title,
+                current_time: currentTime,
+              });
+              trackEvent(MixpanelEvents.VIDEO_COMPLETE, {
+                videoId: video.id,
+                menu: video.mood,
+                selected_time: Number(video.time),
                 video_title: video.title,
                 current_time: currentTime,
               });
@@ -298,6 +332,32 @@ export default function PlayerPage() {
     goToReceipt();
   };
 
+  const handleHeartClick = async () => {
+    if (!video?.id) return;
+    if (hasLiked) return;
+
+    const selectedMenu = mood || video.mood;
+    const selectedTime = Number(time || video.time);
+    const nextHeartCount = heartCount + 1;
+
+    // 믹스패널: 하트 클릭 트래킹
+    trackEvent(MixpanelEvents.CLICK_HEART, {
+      menu: selectedMenu,
+      selected_time: selectedTime,
+      videoId: video.id,
+      total_hearts: nextHeartCount,
+    });
+
+    // Firebase: 하트 +1
+    await incrementHeartCount(video.id, {
+      menu: selectedMenu,
+      selected_time: selectedTime,
+      name: video.title,
+    });
+    localStorage.setItem(`bobfriend-hearted-${video.id}`, "1");
+    setHasLiked(true);
+  };
+
   if (!video) {
     return (
       <div className="app-container min-h-screen flex items-center justify-center">
@@ -322,14 +382,35 @@ export default function PlayerPage() {
       </header>
 
       {/* 플레이어 영역 */}
-      <div className="w-full aspect-video bg-black">
+      <div className="w-full aspect-video bg-black relative">
         <div id="youtube-player" className="w-full h-full" ref={playerContainerRef} />
       </div>
 
       {/* 영상 정보 */}
       <div className="px-4 py-4 border-b border-gray-100">
-        <p className="text-sm text-gray-500">{video.channel}</p>
-        <p className="text-sm text-gray-500 mt-1">{video.duration}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-gray-500">{video.channel}</p>
+            <p className="text-sm text-gray-500 mt-1">{video.duration}</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleHeartClick}
+            disabled={hasLiked}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold whitespace-nowrap ${
+              hasLiked
+                ? "bg-gray-100 text-gray-400 border-gray-200"
+                : "bg-white text-[#2D4A22] border-gray-200"
+            }`}
+            aria-label="하트 추가"
+          >
+            <span className="text-lg leading-none">♥</span>
+            <span className="min-w-[2ch] text-center">
+              {isHeartLoading ? "..." : heartCount}
+            </span>
+          </button>
+        </div>
         <div className="flex gap-2 mt-3">
           <span className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
             {time || video.time}분

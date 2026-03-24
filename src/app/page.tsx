@@ -46,7 +46,7 @@ const menuCards = [
 
 export default function Home() {
   const router = useRouter();
-  const [selectedTime, setSelectedTime] = useState<TimeOption>("20");
+  const [selectedTime, setSelectedTime] = useState<TimeOption>("10");
   const [selectedMood, setSelectedMood] = useState<MoodOption>(null);
   const [watchedVideos, setWatchedVideos] = useState<string[]>([]);
 

@@ -83,6 +83,8 @@ export const MixpanelEvents = {
   VIDEO_PLAY_START: 'video_play_start',
   VIDEO_PLAY_PAUSE: 'video_play_pause',
   VIDEO_PLAY_END: 'video_play_end',
+  VIDEO_COMPLETE: 'video_complete',
+  CLICK_HEART: 'click_heart',
   CLICK_FINISH_MEAL: 'click_finish_meal',
   CLICK_OTHER_VIDEO: 'click_other_video',
   
