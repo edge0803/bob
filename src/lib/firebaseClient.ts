@@ -8,6 +8,8 @@ import {
 import {
   getFirestore,
   doc,
+  collection,
+  addDoc,
   onSnapshot,
   runTransaction,
   serverTimestamp,
@@ -87,6 +89,18 @@ export const subscribeHeartCount = (
   return onSnapshot(ref, (snap) => {
     const data = snap.data() as { hearts?: number } | undefined;
     onCount(typeof data?.hearts === "number" ? data.hearts : 0);
+  });
+};
+
+export const saveFreeInput = async (data: {
+  input_text: string;
+  mood: string | null;
+  time: string | null;
+}) => {
+  const db = getFirebaseFirestore();
+  await addDoc(collection(db, "free_inputs"), {
+    ...data,
+    createdAt: serverTimestamp(),
   });
 };
 
