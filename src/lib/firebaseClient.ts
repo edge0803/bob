@@ -104,6 +104,18 @@ export const saveFreeInput = async (data: {
   });
 };
 
+export const saveFeedback = async (data: {
+  video_id: string;
+  rating: number;
+  comment?: string;
+}) => {
+  const db = getFirebaseFirestore();
+  await addDoc(collection(db, "video_feedback"), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+};
+
 export const incrementHeartCount = async (
   videoId: string,
   meta?: {

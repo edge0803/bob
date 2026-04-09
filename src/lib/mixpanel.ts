@@ -118,6 +118,9 @@ export const MixpanelEvents = {
   // 히스토리
   PAGE_VIEW_HISTORY: 'page_view_history',
   CLICK_RECEIPT_CARD: 'click_receipt_card',
+
+  // 피드백
+  FEEDBACK_SUBMITTED: 'Feedback Submitted',
 };
 
 export default mixpanel;

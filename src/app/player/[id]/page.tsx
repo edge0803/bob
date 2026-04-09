@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import videosData from "../../../../data/videos.json";
 import { trackEvent, trackEventWithCallback, MixpanelEvents } from "@/lib/mixpanel";
-import { incrementHeartCount, subscribeHeartCount } from "@/lib/firebaseClient";
+import { incrementHeartCount, subscribeHeartCount, saveFeedback } from "@/lib/firebaseClient";
 
 interface Video {
   id: string;
@@ -67,6 +67,14 @@ export default function PlayerPage() {
   const [heartCount, setHeartCount] = useState<number>(0);
   const [isHeartLoading, setIsHeartLoading] = useState<boolean>(true);
   const [hasLiked, setHasLiked] = useState<boolean>(false);
+
+  // 피드백 팝업 상태
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackStep, setFeedbackStep] = useState<'rating' | 'thanks' | 'comment'>('rating');
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [hoverRating, setHoverRating] = useState(0);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -155,10 +163,57 @@ export default function PlayerPage() {
     router.push("/receipt");
   }, [video, time, mood, router, startTime]);
 
-  // 영상 종료 시 즉시 영수증으로 이동
+  // 영상 종료 시 피드백 팝업 표시
   const startCountdown = useCallback(() => {
+    setShowFeedback(true);
+    setFeedbackStep('rating');
+  }, []);
+
+  // 별점 선택 핸들러
+  const handleRatingSelect = useCallback(async (rating: number) => {
+    setFeedbackRating(rating);
+    if (rating >= 4) {
+      setFeedbackStep('thanks');
+      try {
+        await saveFeedback({ video_id: video?.id || '', rating });
+      } catch (e) {
+        console.error('[Firebase] saveFeedback error:', e);
+      }
+      trackEvent(MixpanelEvents.FEEDBACK_SUBMITTED, {
+        video_id: video?.id,
+        rating,
+        has_comment: false,
+      });
+      setTimeout(() => {
+        setShowFeedback(false);
+        goToReceipt();
+      }, 1500);
+    } else {
+      setFeedbackStep('comment');
+    }
+  }, [video?.id, goToReceipt]);
+
+  // 피드백 코멘트 제출
+  const handleFeedbackSubmit = useCallback(async () => {
+    setIsFeedbackLoading(true);
+    try {
+      await saveFeedback({
+        video_id: video?.id || '',
+        rating: feedbackRating || 0,
+        comment: feedbackComment,
+      });
+    } catch (e) {
+      console.error('[Firebase] saveFeedback error:', e);
+    }
+    trackEvent(MixpanelEvents.FEEDBACK_SUBMITTED, {
+      video_id: video?.id,
+      rating: feedbackRating,
+      has_comment: !!feedbackComment,
+    });
+    setIsFeedbackLoading(false);
+    setShowFeedback(false);
     goToReceipt();
-  }, [goToReceipt]);
+  }, [video?.id, feedbackRating, feedbackComment, goToReceipt]);
 
   // 컴포넌트 언마운트 시 카운트다운 정리
   useEffect(() => {
@@ -309,7 +364,7 @@ export default function PlayerPage() {
       clearInterval(countdownRef.current);
     }
 
-    // 식사 끝 버튼 트래킹 (이벤트 전송 완료 후 이동)
+    // 식사 끝 버튼 트래킹 (이벤트 전송 완료 후 피드백 팝업)
     await trackEventWithCallback(MixpanelEvents.CLICK_FINISH_MEAL, {
       video_id: video?.id,
       video_title: video?.title,
@@ -317,7 +372,8 @@ export default function PlayerPage() {
       selected_mood: mood,
     });
 
-    goToReceipt();
+    setShowFeedback(true);
+    setFeedbackStep('rating');
   };
 
   const handleHeartClick = async () => {
@@ -425,6 +481,79 @@ export default function PlayerPage() {
 
       {/* 여백 */}
       <div className="flex-1" />
+
+      {/* 피드백 팝업 */}
+      {showFeedback && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
+          <div className="w-full max-w-md bg-white rounded-t-3xl px-6 pt-8 pb-12">
+            {feedbackStep === 'rating' && (
+              <>
+                <div className="text-center mb-8">
+                  <img src="/images/main.png" alt="밥친구" className="w-16 h-16 mx-auto mb-4 object-contain" />
+                  <h2 className="text-xl font-bold text-gray-800">이 영상 어땠어요?</h2>
+                </div>
+                <div className="flex gap-2 justify-center mb-8">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => handleRatingSelect(star)}
+                      onMouseEnter={() => setHoverRating(star)}
+                      onMouseLeave={() => setHoverRating(0)}
+                      className="text-5xl transition-transform active:scale-125 hover:scale-110"
+                    >
+                      <span style={{ color: star <= (hoverRating || feedbackRating || 0) ? '#FBBF24' : '#D1D5DB' }}>
+                        ★
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setShowFeedback(false); goToReceipt(); }}
+                  className="w-full text-gray-400 text-sm py-2"
+                >
+                  건너뛰기
+                </button>
+              </>
+            )}
+
+            {feedbackStep === 'thanks' && (
+              <div className="text-center py-6">
+                <div className="text-6xl mb-4">😊</div>
+                <h2 className="text-xl font-bold text-gray-800">좋은 피드백 고마워!</h2>
+              </div>
+            )}
+
+            {feedbackStep === 'comment' && (
+              <>
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-bold text-gray-800 mb-1">더 나아질 방법이 있을까요?</h2>
+                  <p className="text-sm text-gray-500">의견을 남겨주시면 더 좋은 영상을 추천해드릴게요</p>
+                </div>
+                <textarea
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder="자유롭게 작성해주세요"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm mb-4 resize-none h-28 focus:outline-none focus:ring-2 focus:ring-[#A8C459]"
+                  autoFocus
+                />
+                <button
+                  onClick={handleFeedbackSubmit}
+                  disabled={isFeedbackLoading}
+                  className="w-full bg-[#A8C459] text-white font-semibold py-3 rounded-full text-sm mb-2 disabled:opacity-50"
+                >
+                  {isFeedbackLoading ? '저장 중...' : '제출하기'}
+                </button>
+                <button
+                  onClick={() => { setShowFeedback(false); goToReceipt(); }}
+                  className="w-full text-gray-400 text-sm py-2"
+                >
+                  건너뛰기
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 하단 고정 버튼 */}
       <footer className="sticky bottom-0 bg-white border-t border-gray-100 px-4 py-4">
