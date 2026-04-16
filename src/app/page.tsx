@@ -87,6 +87,11 @@ export default function Home() {
     if (saved) {
       setWatchedVideos(JSON.parse(saved));
     }
+  }, []);
+
+  useEffect(() => {
+    if (!variant) return;
+
     trackEvent(MixpanelEvents.PAGE_VIEW_HOME);
     trackEvent(MixpanelEvents.SESSION_START, {
       variant,
@@ -433,6 +438,37 @@ export default function Home() {
       </section>
     </div>
   );
+
+  if (variant === null) {
+    return (
+      <div className="app-container">
+        <header className="bg-[#A8C459] px-4 sm:px-6 pt-6 sm:pt-8 pb-16 sm:pb-20 text-white relative">
+          <div className="h-6 w-48 bg-white/30 rounded mb-2 animate-pulse" />
+          <div className="h-6 w-64 bg-white/30 rounded mb-3 animate-pulse" />
+          <div className="h-4 w-36 bg-white/20 rounded animate-pulse" />
+          <div className="absolute right-4 sm:right-6 bottom-0 translate-y-6 sm:translate-y-8 z-20 w-40 h-50 sm:w-50 sm:h-50">
+            <img src="/images/main.png" alt="밥친구 캐릭터" className="w-full h-full object-contain" />
+          </div>
+        </header>
+        <section className="bg-white px-4 sm:px-6 py-6 sm:py-8 rounded-t-3xl -mt-6 relative z-10">
+          <div className="h-5 w-56 bg-gray-200 rounded mx-auto mb-6 animate-pulse" />
+          <div className="flex justify-center gap-3">
+            {["10분", "20분", "30분"].map((t) => (
+              <div key={t} className="h-10 w-20 bg-gray-200 rounded-full animate-pulse" />
+            ))}
+          </div>
+        </section>
+        <section className="bg-[#F5F5F5] px-4 sm:px-5 py-4 sm:py-5">
+          <div className="h-4 w-12 bg-gray-300 rounded mb-4 animate-pulse" />
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-40 bg-gray-200 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (showCard && recommendedVideo) {
     return <VideoCard video={recommendedVideo} onPlay={handlePlay} onRecommendAgain={handleRecommendAgain} isLoading={isLoading} />;

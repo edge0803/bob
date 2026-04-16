@@ -5,14 +5,14 @@ import { AB_VARIANT_KEY, type Variant, type InputType } from "@/lib/experiment";
 import { trackEvent, MixpanelEvents } from "@/lib/mixpanel";
 
 interface ABVariantResult {
-  variant: Variant;
-  inputType: InputType;
+  variant: Variant | null;
+  inputType: InputType | null;
 }
 
 const chooseRandomVariant = (): Variant => (Math.random() < 0.5 ? "A" : "B");
 
 export const useABVariant = (): ABVariantResult => {
-  const [variant, setVariant] = useState<Variant>("A");
+  const [variant, setVariant] = useState<Variant | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -32,7 +32,7 @@ export const useABVariant = (): ABVariantResult => {
     });
   }, []);
 
-  const inputType: InputType = variant === "A" ? "select" : "sentence";
+  const inputType: InputType | null = variant === "A" ? "select" : variant === "B" ? "sentence" : null;
 
   return { variant, inputType };
 };
